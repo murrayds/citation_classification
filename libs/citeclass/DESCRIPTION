@@ -1,9 +1,10 @@
 Package: citeclass
-Title: What the Package Does (one line, title case)
-Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-Depends: R (>= 3.4.2)
-License: What license is it under?
+Type: Package
+Title: Project-specific in-text and contextual feature extraction for citation classification
+Version: 0.1.0
+Author: Dakota Murray
+Maintainer: Dakota Murray <dakota.s.murray@gmail.com>
+Description: Project-specific in-text and contextual feature extraction for citation classification. created as part of an ongoing project attempting to automatically classify citation function based on the features of the sentence in which they appear. 
+License: MIT
 Encoding: UTF-8
 LazyData: true
