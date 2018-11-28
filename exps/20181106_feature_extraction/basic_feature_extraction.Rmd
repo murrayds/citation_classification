@@ -8,8 +8,9 @@ output: html_notebook
 ```{r}
 # Library loads
 library(tidyverse)
-library(tm)
+#library(tm)
 library(data.table)
+library(citeclass)
 ```
 
 
@@ -28,7 +29,7 @@ data$text[1115]
 
 ```{r}
 # Load the first dictionary, which contains "negation" key words
-negation <- read.csv("Documents/citation_classification/data/dictionaries/negation.txt", stringsAsFactors = F, header = F)$V1
+negation <- read.csv("~/Documents/citation_classification/data/dictionaries/negation.txt", stringsAsFactors = F, header = F)$V1
 negation
 ```
 
@@ -37,11 +38,9 @@ We need to do some pre-processing: the citation label
 ```{r}
 # we need to first create a corpus, clean the dataset,and replace the label with a tag, like <CITATION>
 data <- data %>% 
-  group_by(doi, sentence_seq) %>%
-  summarize(
-    #labels = list(label),
-    text = gsub(paste("\\(*\\Q", unlist(label), "\\E[,;]*\\)*", sep="", collapse="|"), replacement="<CITATION>", text[1]),
-    text = gsub("(<CITATION> )+<CITATION>", replacement="<CITATION>", text)
+  group_by(doi, sentence_seq) %>% # This removes duplicates, so its quite useful
+  summarise(
+    text = replace_citance_with_tag(text[1], citance_label = unlist(label))
   ) %>%
   left_join(data, by = c("doi" = "doi", "sentence_seq" = "sentence_seq")) %>%
   select(-text.y) %>%
@@ -50,14 +49,6 @@ data <- data %>%
 
 To test, here is an example of a function that can be used to check for the presence of a term from a given cue phrase dictionary
 ```{r}
-# Define a function to check for a cue phrase
-contains_cue <- function(text, cue_words) {
-  return(ifelse(grepl(paste(" ", cue_words, " ", sep="", collapse = "|"), 
-                      text, ignore.case=TRUE),
-                yes=TRUE, no=FALSE)
-  )
-}
-
 data_with_negation <- data %>% 
   mutate(contains_negation = contains_cue(text, negation))
 
@@ -66,19 +57,13 @@ table(data_with_negation$contains_negation)
 
 Also, we can define some functions to check whether the data contains numbers or quotations
 ```{r}
-# Searches whether the data contains a numeric value greater than 10
-contains_numbers <- function(text) ifelse(grepl("\\d\\d+", text), yes=TRUE, no=FALSE)
-
 data_with_numbers <- data %>%
-  mutate(contains_number = contains_numbers(text))
+  mutate(contains_number = citance_contains_numbers(text))
 
 table(data_with_numbers$contains_number)
 
-# Searches whether quotations contain
-contains_quotations <- function(text) ifelse(grepl("[\"'“”]", text), yes=TRUE, no=FALSE)
-
 data_with_quotes <- data %>%
-  mutate(contains_quotation = contains_quotations(text))
+  mutate(contains_quotation = citance_contains_quotes(text))
 
 table(data_with_quotes$contains_quotation)
 ```
