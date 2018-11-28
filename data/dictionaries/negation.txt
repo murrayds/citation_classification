@@ -1,26 +1,30 @@
-absence 
-absent
-cannot
-could not
-either
-except
-exclude
+bad
+damage
+damaged
+erroneous
 fail
+failed
 failure
-favor
-impossible
-instead of
-lack
-loss
-miss
-negative
+fallacious
+impair
+impede
+in error
+incorrect
+invalid
+is not
+mistaken
+negated
 neither
-nor
 never
+no
 none
-no longer
-rather than
-rule out
-unable
-with the exception of
-without
+nor
+not
+not correcct
+not true
+nothing
+rejected
+spurious
+worse
+worst
+wrong
