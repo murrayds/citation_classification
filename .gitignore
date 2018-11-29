@@ -5,6 +5,10 @@
 # Session Data files
 .RData
 
+# R package information
+.tar.gz
+.Rcheck
+
 # Example code in package build process
 *-Ex.R
 
@@ -37,3 +41,7 @@ rsconnect/
 
 # osx .DS_Store
 .DS_Store
+.Rproj.user
+
+# experiment html files
+exps/*/*.html
