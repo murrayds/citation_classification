@@ -1,0 +1,70 @@
+---
+title: "Experiment: Extracting Features"
+author: "Dakota Murray"
+output: html_notebook
+---
+
+
+```{r}
+# Library loads
+library(tidyverse)
+#library(tm)
+library(data.table)
+library(citeclass)
+```
+
+
+```{r}
+# Load data from dropbox folder
+data = read_delim("https://www.dropbox.com/s/k0eqsbikxebtrmq/joi_sentences_2018_Nov_2018.txt?dl=1", delim = "\t", col_names = F)
+
+# Assign mroe intuitive column names
+names(data) <- c("doi", "title", "label", "text", "pub_year", "pub_month", "n_authors", "n_references", "n_sections", "n_sentences", "n_citation_sentence", "reference_seq",
+                 "section_seq", "paragraph_seq", "sentence_seq", "citation_characer_seq", "n_citations_in_sentence", "sentence_character_seq")
+
+# Lets look at a sentence
+data$text[1115]
+```
+
+
+```{r}
+# Load the first dictionary, which contains "negation" key words
+negation <- read.csv("~/Documents/citation_classification/data/dictionaries/negation.txt", stringsAsFactors = F, header = F)$V1
+negation
+```
+
+We need to do some pre-processing: the citation label 
+
+```{r}
+# we need to first create a corpus, clean the dataset,and replace the label with a tag, like <CITATION>
+data <- data %>% 
+  group_by(doi, sentence_seq) %>% # This removes duplicates, so its quite useful
+  summarise(
+    text = replace_citance_with_tag(text[1], citance_label = unlist(label))
+  ) %>%
+  left_join(data, by = c("doi" = "doi", "sentence_seq" = "sentence_seq")) %>%
+  select(-text.y) %>%
+  rename(text = text.x)
+```
+
+To test, here is an example of a function that can be used to check for the presence of a term from a given cue phrase dictionary
+```{r}
+data_with_negation <- data %>% 
+  mutate(contains_negation = contains_cue(text, negation))
+
+table(data_with_negation$contains_negation)
+```
+
+Also, we can define some functions to check whether the data contains numbers or quotations
+```{r}
+data_with_numbers <- data %>%
+  mutate(contains_number = citance_contains_numbers(text))
+
+table(data_with_numbers$contains_number)
+
+data_with_quotes <- data %>%
+  mutate(contains_quotation = citance_contains_quotes(text))
+
+table(data_with_quotes$contains_quotation)
+```
+
