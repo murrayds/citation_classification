@@ -1,0 +1,86 @@
+---
+title: "Citation Classification: Embedding"
+author: "Dakota Murray"
+output: html_notebook
+---
+
+
+In this notebook I try two different embedding techniques to get a good sense of how easily separable the data is, based on the in-text features. I experiment with both classical multidimensional scaling and isomap. Here, I focus only on the text features, and so exclude any contextual features (position in paper, number of citations in the sentence, etc.)
+
+
+First, load the data and appropriate libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(vegan)
+library(proxy)
+library(scatterplot3d)
+features <- read.csv("https://www.dropbox.com/s/umkus2acwj0w1v6/feature_matrix.csv?dl=1")
+```
+
+The first thing I do is run PCA. Fortunately, this is pretty fast and easy to run on the whole dataset, which is what I use to run it below. The first two principal axes explain a small, but not trivial amount of the total variance. The `evidential` terms ("according to", "believes", "suggest", etc.) and `reported` ("addressed", "mentioned", "reports", etc.) are strongly correlated and dominate the first principal axis. The biggest loading along the second principal axis is the `methodological` list ("analyse", "algorithm", "process", etc.), with a much smaller correlated, but non-trivial loading on the `hypothesis` variable ("claim", "idea", "imply", etc.). There are also several srong loading at about a 45 degree angle beween the two axes, including the `achieved` list ("accomplish", "accurae", "reveal", "success", etc.), `logical_connectives` ("thereby", "and", "but", etc.) and `supported` ("build on", "agree", "confirm", etc.). 
+```{r}
+library(ggfortify)
+features_trimmed <- features %>%
+  select(-n_references, -X, -n_citations_in_sentence, -sentence_progression, -section_progression)
+  
+autoplot(prcomp(features_trimmed, scale = F),
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3,
+         alpha = 0.05) +
+  theme_bw() +
+  labs(title = "First two PCs for text data, extracetd features only")
+```
+
+
+In order to assess the quality of various clusterings, I need some way to *see* the quality of the clusters. However, visualization is difficult with this relatively high-dimensional data. I will use two differnet techniques in order to create an embedding of this data in two dimensions: classical multidiemsional scaling (`cmds`) and Isomap manifold learning (`isomap`). 
+
+One issue is that these methods are incredibly slow, with CMDS scaling at a compelxity of $O(n^{3})$, and isomap seemingly perfroming even worse. While methods such as landmark-cmds exis, I will for now only focus on running this analysis on a sample of the feature vector. 
+
+I tried several iterations of samples and clusterings; the ones below seem to provide some good results. First I run a basic k-means clustering using k = 2, and visualize the clusterings on top of the embeddings. CMDS results in an interestinv visualization with many smallish groups of points. Meanwhile, the isomap visualization produces a more dense blob of points. K-means clusering seems to produce a fairly even divide beween the two clusters, suggesting that there might be some differences between these populations. 
+```{r}
+set.seed(43)
+
+sample <- features %>%
+  sample_n(2000) %>%
+  select(-n_references, -X, -n_citations_in_sentence, -sentence_progression, -section_progression)
+
+dist.matrix <- proxy::dist(sample, method = "cosine") 
+
+clusts <- kmeans(dist.matrix, 2)
+#table(clusts$cluster)
+prop.table(table(clusts$cluster))
+
+points.cmds <- cmdscale(dist.matrix, k = 2)
+plot(points.cmds, col = clusts$cluster)
+
+points.isomap <- isomap(dist.matrix, ndim = 2, k = 5)
+plot(points.isomap, net = T, col = clusts$cluster)
+```
+
+Next, I repeat the process, but this time I use k=3 k-means clusters. 
+```{r}
+set.seed(67)
+
+clusts <- kmeans(dist.matrix, 3)
+prop.table(table(clusts$cluster))
+
+#points.cmds <- cmdscale(dist.matrix, k = 3)
+plot(points.cmds, col = clusts$cluster)
+
+#points.isomap <- isomap(dist.matrix, ndim = 3, k = 5)
+plot(points.isomap, net = T, col = clusts$cluster)
+```
+
+And finally, I repeat but for k=4 clusters
+```{r}
+set.seed(52)
+
+clusts <- kmeans(dist.matrix, 4)
+prop.table(table(clusts$cluster))
+
+# We already have the 3-d embedding from before, so we only need to plot
+plot(points.cmds, col = clusts$cluster)
+
+plot(points.isomap, net = T, col = clusts$cluster)
+```
+
