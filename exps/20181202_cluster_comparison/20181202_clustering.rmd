@@ -1,0 +1,260 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(vegan)
+library(proxy)
+library(dbscan)
+library(caret)
+features <- read.csv("https://www.dropbox.com/s/umkus2acwj0w1v6/feature_matrix.csv?dl=1")
+```
+
+
+After switching to Jaccard distance, its clear that the `cmds` visualization is more useful, and so that is what I will stick with going forward,
+
+I wnat to be sure that we have a robust clusering, but increasing it too much has a tendency of making the runtime incredibly long. This is because `cmdscale` and especially `isomap` scale very poorly—if I was using euclidean distance, there would be methods to handle these large datasets (i.e.: landmark methods), but those won't help with cosine distance, which we use here.
+```{r}
+set.seed(1234)
+
+sample <- features %>%
+  sample_n(8000)
+
+sample_intext <- sample %>%
+  dplyr::select(-doi, -sentence_seq, -text, -X, -third_person, -announce, -section_progression, -logical_connectives, -n_references, -n_citations_in_sentence, -sentence_progression)
+
+
+
+sample_intext <- as.data.frame(apply(sample_intext, 1:2, function(x) {
+  as.numeric(x > 0)
+})) %>% mutate(
+  sentence_progression = as.numeric(scale(sample$sentence_progression)),
+  logical_connectives = as.numeric(scale(sample$logical_connectives)),
+  n_references = as.numeric(scale(sample$n_references)),
+  n_citation_in_sentence = as.numeric(scale(sample$n_citations_in_sentence))
+)
+                              
+# generate the feature matrix
+dist.matrix <- proxy::dist(sample_intext, "cosine") 
+
+# Save the sample
+write.csv(sample, file = "~/Dropbox/citation_type/data/quarter_sample.csv")
+#write.csv(points.cmds, file = "~/Dropbox/citation_type/data/quarter_sample_cmds_embedding.csv")
+```
+
+```{r}
+library(ggfortify)
+  
+autoplot(prcomp(features %>% select(-doi, -sentence_seq, -X, -text, -announce, -section_progression, -third_person), scale = T),
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3,
+         loadings.label.repel = T,
+         alpha = 0.5) +
+  theme_bw() +
+  labs(title = "First two PCs of citation in-text features and metadata")
+```
+
+
+
+```{r}
+points.cmds <- cmdscale(dist.matrix, k = 2)
+
+as.data.frame(points.cmds) %>%
+  mutate(
+    x = V1,
+    y = V2
+  ) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point(alpha = 0.8) +
+  theme_bw() +
+  labs(x = "First embedding dimension",
+       y = "Second embedding dimension",
+       title = "Multidimensional Scaling—2-dimension, using cosine distance")
+```
+
+Lets now try k-means clustering. First with k = 2
+```{r}
+# 1 works well
+set.seed(1)
+clusts.kmeans <- kmeans(dist.matrix, 2)
+prop.table(table(clusts.kmeans$cluster))
+
+as.data.frame(points.cmds) %>%
+  mutate(
+    x = V1,
+    y = V2,
+    color = as.factor(clusts.kmeans$cluster)
+  ) %>%
+  ggplot(aes(x = x, y = y, color = color)) +
+  geom_point(alpha = 0.8) +
+  scale_color_discrete(name = "Cluster") +
+  theme_bw() +
+  labs(x = "First embedding dimension",
+       y = "Second embedding dimension",
+       title = "K-means clustering with k=2")
+```
+
+Now again lets try with k=3
+```{r}
+# 1 works well
+set.seed(1)
+clusts.kmeans.3 <- kmeans(dist.matrix, 3)
+
+as.data.frame(points.cmds) %>%
+  mutate(
+    x = V1,
+    y = V2,
+    color = as.factor(clusts.kmeans.3$cluster)
+  ) %>%
+  ggplot(aes(x = x, y = y, color = color)) +
+  geom_point(alpha = 0.8) +
+  scale_color_discrete(name = "Cluster") +
+  theme_bw() +
+  labs(x = "First embedding dimension",
+       y = "Second embedding dimension",
+       title = "K-means clustering with k=3")
+```
+
+And finally, lets try k=4
+
+```{r}
+# 1 works well
+set.seed(2)
+clusts.kmeans.4 <- kmeans(dist.matrix, 4)
+
+as.data.frame(points.cmds) %>%
+  mutate(
+    x = V1,
+    y = V2,
+    color = as.factor(clusts.kmeans.4$cluster)
+  ) %>%
+  ggplot(aes(x = x, y = y, color = color)) +
+  geom_point(alpha = 0.8) +
+  scale_color_discrete(name = "Cluster") +
+  theme_bw() +
+  labs(x = "First embedding dimension",
+       y = "Second embedding dimension",
+       title = "K-means clustering with k=4")
+```
+
+
+
+```{r}
+sample_intext %>%
+  dplyr::mutate(cluster = as.factor(clusts.kmeans.3$cluster)) %>%
+  gather(key = "key", value = "value", -one_of("cluster")) %>%
+  group_by(cluster, key) %>%
+  summarize(
+    mu = mean(value)
+  ) %>%
+  ggplot(aes(x = cluster, y = mu, fill = cluster)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~key, ncol = 7, scale = "free_y") +
+  theme_bw() +
+  guides(fill = F) +
+  theme(axis.text.y = element_text(size = 5),
+        text = element_text(size = 6),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Difference by clusters")
+```
+
+
+```{r}
+as.data.frame(sample_intext) %>%
+  mutate(cluster = as.factor(clusts.kmeans.3$cluster)) %>%
+  gather(key = "key", value = "value", -one_of("cluster")) %>%
+  group_by(cluster, key) %>%
+  summarize(
+    mu = mean(value)
+  ) %>%
+  ggplot(aes(x = key, y = mu, fill = cluster)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~cluster, ncol = 1, scale = "free_y") +
+  theme_light() +
+  theme(legend.position = "bottom",
+        axis.text.y = element_text(size = 5),
+        text = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+
+I wasn't having much success running dbscan on the distance matrix itself, it would simply produce a single giant cluster with a couplw of small points scattered elsewhere. However, it doesn't turn out that great for this example. 
+```{r}
+set.seed(1111)
+clusts.dbscan <- hdbscan(dist.matrix, minPts = 50)
+table(clusts.dbscan$cluster)
+plot(points.cmds, col = clusts.dbscan$cluster + 1)
+```
+
+I will run two different classifiers in order to ensure that these categories can be assigned appropriately 
+```{r}
+# define training control
+train_control <- trainControl(method="cv", number=10)
+
+model.tree <- train(x = sample_intext, y = as.factor(clusts.kmeans.3$cluster), trControl=train_control, method="rpart", control = rpart.control(minsplit = 10, minbucket = 10), tuneLength = 20)
+# summarize results
+print(model.tree)
+
+plot(model.tree)
+```
+
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+
+data <- sample_intext %>% mutate(cluster = as.factor(clusts.kmeans.3$cluster))
+
+tree <- rpart(cluster ~ ., data = data, control = rpart.control(cp = 0.005, minsplit = 10, minbucket = 10))
+
+rpart.plot(tree, type = 2)
+```
+
+
+```{r}
+library(caret)
+# define training control
+train_control <- trainControl(method="cv", number=10)
+
+model <- train(x = sample_intext, y = as.factor(clusts.kmeans.3$cluster), trControl=train_control, method="knn", tuneLength = 20)
+# summarize results
+print(model)
+```
+
+
+```{r}
+train_control <- trainControl(method="cv", number=5)
+
+model <- train(x = sample_intext, y = as.factor(clusts.kmeans.3$cluster), trControl=train_control, method="rf", tuneLength = 5)
+# summarize results
+print(model)
+plot(model)
+```
+
+
+```{r}
+sample_c1 <- sample[clusts.kmeans.3$cluster == 1, ]
+sample_c2 <- sample[clusts.kmeans.3$cluster == 2, ]
+sample_c3 <- sample[clusts.kmeans.3$cluster == 3, ]
+```
+
+```{r}
+head(sample_c1$text, 20)
+```
+
+
+```{r}
+head(sample_c2$text, 10)
+```
+
+
+
+```{r}
+head(sample_c3$text, 10)
+```

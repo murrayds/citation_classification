@@ -1,0 +1,127 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r message=FALSE, warning=FALSE}
+library(citeclass)
+library(tidyverse)
+library(data.table)
+
+data <- load_joi_data()
+data$text <- sapply(1:nrow(data), function(ind) {
+  replace_citance_with_tag(data$text[ind], data$label[ind])
+}) 
+```
+
+
+```{r}
+tidydata <- data %>%
+  group_by(doi, sentence_seq) %>%
+  ungroup() %>%
+  unnest_tokens(word, text, drop = F)
+```
+
+
+Build feature list
+```{r}
+# now lets add some more basic features
+tidydata$has_numbers <- !is.na(as.numeric(tidydata$word))
+
+# features for position in paper
+tidydata$sentence_progression <- tidydata$sentence_seq / tidydata$n_sentences
+tidydata$section_progression <- tidydata$section_seq / tidydata$n_sections
+
+# Features
+features <- tidydata %>%
+  dplyr::select(
+    doi,
+    sentence_seq,
+    word,
+    text,
+    n_citations_in_sentence,
+    n_references,
+    sentence_progression,
+    section_progression,
+    has_numbers
+  )
+
+# load the dictionary file names
+dictionaries <- list.files("~/Documents/citation_classification/data/dictionaries/", pattern = "*.txt", full.names = T)
+
+cue_terms <- features %>% select(doi, sentence_seq, word)
+# for every dictionary file, load it 
+for (path_to_dict in dictionaries) {
+  words <- tolower(read.csv(path_to_dict, stringsAsFactors = F, header = F)$V1)
+  feature_name <- strsplit(basename(path_to_dict), "[.]")[[1]][1]
+  
+  # print progress updates
+  print(feature_name)
+  cue_terms[[feature_name]] <- cue_terms$word %in% words
+}
+s
+features <- cue_terms %>%
+  gather(key, value = "cue_term", -doi, -sentence_seq, -word) %>%
+  group_by(doi, sentence_seq, key) %>%
+  summarize(
+    frequency = sum(cue_term)
+  ) %>%
+  spread(key, frequency) %>%
+  left_join(features, by = c("doi", "sentence_seq")) %>% 
+  group_by(doi, sentence_seq) %>%
+  slice(1) %>%
+  select(-word) %>%
+  ungroup()
+
+
+write.csv(features, file = "~/Dropbox/citation_type/data/feature_matrix.csv")
+
+head(features)
+```
+
+```{r}
+sample <- features %>%
+  sample_n(2000) %>%
+  dplyr::select(-section_progression)
+```
+
+
+Create the distance matrix, 
+```{r}
+dist.matrix <- proxy::dist(sample, method = "cosine") 
+
+points <- cmdscale(dist.matrix, k = 2)
+```
+
+
+```{r}
+clusts <- kmeans(dist.matrix, 3)
+table(clusts$cluster)
+prop.table(table(clusts$cluster))
+
+plot(points, col = clusts$cluster)
+```
+
+
+```{r}
+library(dbscan)
+db <- dbscan::hdbscan(dist.matrix, minPts = 35) 
+table(db$cluster)
+
+plot(points, col = db$cluster + 1)
+```
+
+
+```{r}
+library(ggfortify)
+
+f <- features %>%
+  ungroup() %>%
+  dplyr::select(-doi, -sentence_seq, -text, -word, -has_numbers, -announce)
+autoplot(prcomp(f, scale = T),
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3,
+         loadings.label.repel=T, alpha = 0.1) +
+  theme_bw()
+```
+

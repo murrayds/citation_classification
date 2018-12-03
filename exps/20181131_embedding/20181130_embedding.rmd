@@ -38,22 +38,28 @@ One issue is that these methods are incredibly slow, with CMDS scaling at a comp
 
 I tried several iterations of samples and clusterings; the ones below seem to provide some good results. First I run a basic k-means clustering using k = 2, and visualize the clusterings on top of the embeddings. CMDS results in an interestinv visualization with many smallish groups of points. Meanwhile, the isomap visualization produces a more dense blob of points. K-means clusering seems to produce a fairly even divide beween the two clusters, suggesting that there might be some differences between these populations. 
 ```{r}
-set.seed(43)
+set.seed(46)
 
 sample <- features %>%
-  sample_n(2000) %>%
-  select(-n_references, -X, -n_citations_in_sentence, -sentence_progression, -section_progression)
+  sample_n(7000) %>%
+  select(-n_references, -X, -n_citations_in_sentence, -sentence_progression, -section_progression, -has_numbers, -third_person, -has_quotes)
 
 dist.matrix <- proxy::dist(sample, method = "cosine") 
 
 clusts <- kmeans(dist.matrix, 2)
-#table(clusts$cluster)
 prop.table(table(clusts$cluster))
 
 points.cmds <- cmdscale(dist.matrix, k = 2)
 plot(points.cmds, col = clusts$cluster)
 
-points.isomap <- isomap(dist.matrix, ndim = 2, k = 5)
+points.isomap <- isomap(dist.matrix, ndim = 2, k = 30)
+plot(points.isomap, net = T, col = clusts$cluster)
+```
+
+
+```{r}
+set.seed(51)
+clusts <- kmeans(dist.matrix, 2)
 plot(points.isomap, net = T, col = clusts$cluster)
 ```
 
