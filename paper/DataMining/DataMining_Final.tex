@@ -106,34 +106,6 @@ The field of automatic citation classification have thus far opted for a “top-
 
 In this study, I use an unsupervised, “bottom-up” approach to the study of the nuances and meanings of in-text citation using full-text data from all publications in the Journal of Informetrics. I employ a series of unsupervised clustering techniques on selected features of these in-text citations with the goal of revealing latent citation types. The features I extract are intended to maximize interpretability, rather than detail and complexity. The findings of this analysis will be used to inform future studies of citation classification. 
 
- 
-
-%----------------------------------------------------------------------------------------
-%	MEETING NOTES
-%----------------------------------------------------------------------------------------
-
-\section{Meeting Notes}
-
-\subsection{Week 2: 12th November, 2018}
-\begin{itemize}
-\item Previous week's tasks: wrote R code to process text and extract in-text citation features. Started creating dictionary lists of interesting cue words. Set up github and dropbox files
-\item Next week's work: Get a hold of Ken Hyland's work and finish creating dictionary lists. Convert cue-phrase identification to a library that can be easily loaded into an R script. Extract all features and create histograms of each. Extract contextual features from the database (based on author, reference info, etc.). 
-\item Blockers: Getting access to the Hyland book. 
-\end{itemize}
-
-\begin{itemize}
-\item Previous week's tasks: Gathered literature relating to automatic classification of citation types. Downloaded all relevant data for JOI and placed it onto my local computer. Wrote project introduction and began planning analysis.
-\item Current week's tasks: Begin setting up project infrastructure (dropbox, github, etc.). Make list of features to extract and began coding to make it so. 
-\end{itemize}
-
-\subsection{Week 1: 2nd November, 2018}
-
-\begin{itemize}
-\item Previous week's tasks: Gathered literature relating to automatic classification of citation types. Downloaded all relevant data for JOI and placed it onto my local computer. Wrote project introduction and began planning analysis.
-\item Current week's tasks: Begin setting up project infrastructure (dropbox, github, etc.). Make list of features to extract and began coding to make it so. 
-\end{itemize}
-
-
 %----------------------------------------------------------------------------------------
 %	METHODS
 %----------------------------------------------------------------------------------------
@@ -141,26 +113,23 @@ In this study, I use an unsupervised, “bottom-up” approach to the study of t
 \section{Methods}
 
 \subsection{Data}
-The data used in this analysis comes from the Elsevier ScienceDirect database. This dataset was originally obtained by the University of Leiden in 2017, and contains 4,821,774 english-language publications specifically labeled as “full-length article”, “short communication”, or “reviewer article” published between 1980 and 2016. Sentences containing in-text citations have been extracted from the full-text of these articles, and placed into a relational database hosted by the University of Leiden. More information on the Elsevier dataset, including a comparison to the existing PubMed dataset, and a large-scale descriptive analysis, can be found in a recent study by Boyack et al.,  ~\cite{boyack_characterizing_2018}. In this analysis, I focus primarily on the Journal of Informetrics, a journal of relatively small size and of which I am familiar. There are 735 publications in the Journal of Informetrics, which corresponds to around 35,000 sentences containing in-text citations. This provides a manageable and interpretable, though limited dataset; any findings resulting from analysis of this limited data can easily be expanded to other journals and scientific disciplines. 
+The data used in this analysis comes from the Elsevier ScienceDirect database. This dataset was originally obtained by the University of Leiden in 2017, and contains 4,821,774 english-language publications specifically labeled as “full-length article”, “short communication”, or “reviewer article” published between 1980 and 2016. Sentences containing in-text citations have been extracted from the full-text of these articles, and placed into a relational database hosted by the University of Leiden. More information on the Elsevier dataset, including a comparison to the existing PubMed dataset, and a large-scale descriptive analysis, can be found in a recent study by Boyack et al., ~\cite{boyack_characterizing_2018}. In this analysis, I focus primarily on the Journal of informetrics, a journal of relatively small size and of which I am familiar. There are 735 publications in the Journal of Informetrics, which corresponds to around 20,000 sentences containing in-text citations. This provides a manageable sample; any findings resulting from analysis of this limited data can easily be expanded to other journals and scientific disciplines. From these 20,000 sentences, we randomly sample 8,000; this smaller sample is more amenable to the analytica; 
 
 
 \subsection{Selected Features}
-Feature extracted include....
 
-text-based features
+Previous analysis of citation function have relied on a host of sophisticated features such as parts-of-speech-tagged N-grams of the sentence (Teufel, 2006; Athar, 2011; Li, 2013; Valenzuela, 2015) and sentence dependency structure (athar, 2011; Li, 2013; Jha, 2017). However, these approaches tend to produce large feature sets that, while often useful for classification, are difficult to interpret. In this early stage of analysis, I will instead focus on a smaller set of features that can be more readily interpreted.  
 
+I represent each sentence in a feature-space using a simplified version of a bag-of-words model. I counted the occurrence of words in each sentence that appeared in each of 31 mutually-exclusive word-lists. These word-lists were originally crafted to study citation sentiment (Small, 2018), and words within each list were selected due to their having relevance within scientific writing. 
 
-context-features
+In addition to features extracted from the textual elements of each citation, past research has also demonstrated the usefulness of contextual features of the citation, such as its position in the paper (Teufel 2006; Valenzuela, 2015; Jha, 2017). Because of this, I included a feature containing the \textit{percentage} of progression of the citation through the paper, which is to say the index of the citation sentence in the paper divided by the total number of sentences. For example, if a sentence containing a citation is the 5th sentence in a paper with 200 total sentences, then it would have a sentence progression would be 0.025 percent. I also included a feature containing the number of citations in the citation sentence, and another variable representing the number of references in the paper. 
 
+\subsection{Cluster generation and validation}
+Once I construct a feature vector for all citation sentences, I will use unsupervised clustering techniques in an attempt to uncover latent citation function. Past research on citation function have tended to focus on \textit{classification}, rather than clustering. As such, there is little history of which methods work best. I will use three methods representing a range of common clustering techniques: k-means, DBscan, and hierarchical agglomerative clustering. 
 
+To gain a sense of cluster quality, I embed the 35-dimensional feature space into a 2-dimensional feature space which can be plotted. I constructed a feature matrix by calculating the cosine distance (1 - cosine similarity) for each pair of points. I then used classical multidimensional-scaling to embed this distance matrix into 2-dimensional euclidean space. This approach of embedding a cosine distance matrix into euclidean space is not exactly mathematically "correct", but it produced good enough results. Classical multidimensional scaling has a computational complexity of $O(n^{3}$, and so scales poorly with larger data-sets; for this reason, I limit the final analysis to only n=8,000 sentences randomly selected from the original 20,000. 
 
-\subsection{Unsupervised clustering techniques}
-
-K-means...
-
-Hierarchical agglomerative...
-
-DBscan...?
+I ran several iterations of each of the above clustering techniques, and choose the seemingly optimal clustering by examining how the clusters map onto the 2-dimensional embedding. I then assessed the utility of the clustering by attempting to classify each sentence into its assigned cluster category. High accuracy in task is evidence that the proposed clustering is robust and can be predicted from the provided features. I use three classification techniques: k-nearest neighbors, a simple Rpart decision tree, and random forests. I run each through a series of parameter turnings and train each using 10-fold cross validation. 
 
 
 %----------------------------------------------------------------------------------------
