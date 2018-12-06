@@ -30,13 +30,18 @@ BCOR5mm, % Binding correction
 
 \input{structure.tex} % Include the structure.tex file which specified the document structure and layout
 
+
+% set a better name to the figure directory
+%\def\figdir{figures/manuscript_v1}
+
+
 \hyphenation{Fortran hy-phen-ation} % Specify custom hyphenation points in words with dashes where you would like hyphenation to occur, or alternatively, don't put any dashes in a word to stop hyphenation altogether
 
 %----------------------------------------------------------------------------------------
 %	TITLE AND AUTHOR(S)
 %----------------------------------------------------------------------------------------
 
-\title{\normalfont\spacedallcaps{An cluster-analysis investigation of the latent function of in-text citations}} % The article title
+\title{\normalfont\spacedallcaps{A cluster-analysis investigation of the latent function of in-text citations}} % The article title
 
 %\subtitle{Subtitle} % Uncomment to display a subtitle
 
@@ -78,7 +83,7 @@ BCOR5mm, % Binding correction
 
 \section*{Abstract} % This section will not appear in the table of contents due to the star (\section*)
 
-\lipsum[1] % Dummy text
+The disciplines of scientometrics and science policy rely on citation counts as a way to measure research performance and study the global scientific workforce. However, citation counts are flawed in that they treat all citations as homogeneous; in reality, citations in academic writing can perform different functions, such as citing a work to mimic its methodology, to compare results, to frame an argument, or to critique an approach. Automatic classification of citations instances according to their latent citation function remains an open problem, with little to no consensus in classification schemes or approaches. This project consitutes the first step of a new, data-driven approach of discovering and classifying latent citation function. I extracted simplified sentence-level features from citation-containing sentences that appear within the \textit{Journal of Informetrics}. I then applied unsupervised clustering techniques to this feature space, and found that k-means clustering with three clusters produces the seemingly optimal clustering. I validated the quality of this clustering by building and testing several classifiers to predict the cluster assignment of each sentence. Contextual features, such as the position of the sentence in the paper, were the strongest predictor of cluster assignment, followed by the number of references in the sentence. I also found some evidence that certain cue words are useful in determining cluster assignment. Future work will apply more sophisticated techniques to this and other scientific disciplines, and attempt to build from the data a useful citation classification scheme. 
 
 %----------------------------------------------------------------------------------------
 %	AUTHOR AFFILIATIONS
@@ -96,11 +101,11 @@ BCOR5mm, % Binding correction
 
 \section{Introduction}
 
-The citation constitutes one of the most basic unit of analysis in the fields of bibliometrics, scientometrics, and quantitative study of science. The h-index ~\cite{hirsch_index_2005}, journal-impact factor ~\cite{garfield_citation_1955}, and other evaluative tools have emerged from these disciplines and been put into widespread us. For better or worse, bibliometric indicators are now ubiquitous in the scientific ecosystem. Google Scholar publicly displays a an author’s h-index, most journals feature their journal impact factor prominently on their homepages, and universities use tools from companies like Academic Analytics that use citations to benchmark a department’s research performance. 
+The citation constitutes one of the most basic unit of analysis in the fields of bibliometrics, scientometrics, and quantitative study of science. The h-index~\cite{hirsch_index_2005}, journal-impact factor~\cite{garfield_citation_1955}, and other evaluative tools have emerged from these disciplines and been put into widespread us. For better or worse, bibliometric indicators are now ubiquitous in the scientific ecosystem. Google Scholar publicly displays a an author’s h-index, most journals feature their journal impact factor prominently on their homepages, and universities use tools from companies like Academic Analytics that use citations to benchmark a department’s research performance. 
 
-Given their present importance, it is worrisome that citation-count based metrics often fail as indicators of quality~\cite{leydesdorff_citations:_2016}. One criticism of citation-based evaluation (of many) is that citations do not necessarily represent an endorsement of a past work, but may instead reflect a host of other “non-scientific” meanings~\cite{bornmann_what_2006}. Bibliometric researchers have long attempted to create classification frameworks that capture the diversity of citation meanings~\cite{moravcsik_results_1975}, but such schemes have tended to require intensive manual effort. That the nature of citations cannot be determined at scale remains a pressing concern for any citation-based evaluation.
+Given their present importance, it is worrisome that citation-count based metrics often fail as indicators of quality~\cite{leydesdorff_citations:_2016}. One criticism of citation-based evaluation (of many) is that citations do not necessarily represent an endorsement of a past work, but may instead reflect a host of other “non-scientific” meanings~\cite{lutz_bornmann_what_2008}. Bibliometric researchers have long attempted to create classification frameworks that capture the diversity of citation meanings~\cite{moravcsik_results_1975}, but such schemes have tended to require intensive manual effort. That the nature of citations cannot be determined at scale remains a pressing concern for any citation-based evaluation.
 
-More recently, computational and natural language processing experts have developed techniques to automatically classify citations using in-text features and publication metadata ~\cite{jha_nlp-driven_2017}. Such studies have attempted to classify citations based on their supposed function ~\cite{teufel_automatic_2006}, sentiment~\cite{catalini_incidence_2015}, and importance ~\cite{valenzuela_identifying_2015}, and have attempted to address the technical, rather than social or theoretical issues. Despite some progress made by these researchers, citation classification remains an open and contentious problem.
+More recently, computational and natural language processing researchers have developed techniques to automatically classify citations using in-text features and publication metadata~\cite{jha_nlp-driven_2017}. Such studies have attempted to classify citations based on their supposed function~\cite{teufel_automatic_2006}, sentiment~\cite{catalini_incidence_2015}, and importance~\cite{valenzuela_identifying_2015}. However, these approaches have tended to address technical, rather than social or theoretical issues. Despite some progress made by these researchers, citation classification remains an open and  problem with little overall consensus.
 
 The field of automatic citation classification have thus far opted for a “top-down” approach to the development of classification frameworks. However, these approaches have necessitated that researchers impose a model of citation onto their data, models which vary greatly between individual researchers and disciplines. Thus far, studies of automatic citation classification has produced little to no consensus on a best model or approach to citation classification. However, the massive quantities of structured full-text data of scientific publications that are now available allow for alternative approaches. 
 
@@ -113,21 +118,22 @@ In this study, I use an unsupervised, “bottom-up” approach to the study of t
 \section{Methods}
 
 \subsection{Data}
-The data used in this analysis comes from the Elsevier ScienceDirect database. This dataset was originally obtained by the University of Leiden in 2017, and contains 4,821,774 english-language publications specifically labeled as “full-length article”, “short communication”, or “reviewer article” published between 1980 and 2016. Sentences containing in-text citations have been extracted from the full-text of these articles, and placed into a relational database hosted by the University of Leiden. More information on the Elsevier dataset, including a comparison to the existing PubMed dataset, and a large-scale descriptive analysis, can be found in a recent study by Boyack et al., ~\cite{boyack_characterizing_2018}. In this analysis, I focus primarily on the Journal of informetrics, a journal of relatively small size and of which I am familiar. There are 735 publications in the Journal of Informetrics, which corresponds to around 20,000 sentences containing in-text citations. This provides a manageable sample; any findings resulting from analysis of this limited data can easily be expanded to other journals and scientific disciplines. From these 20,000 sentences, we randomly sample 8,000; this smaller sample is more amenable to the analytica; 
+The data used in this analysis comes from the Elsevier ScienceDirect database. This dataset was originally obtained by the University of Leiden in 2017, and contains 4,821,774 english-language publications specifically labeled as “full-length article”, “short communication”, or “reviewer article” published between 1980 and 2016. Sentences containing in-text citations have been extracted from the full-text of these articles, and placed into a relational database hosted by the University of Leiden. More information on the Elsevier dataset, including a comparison to the existing PubMed dataset, and a large-scale descriptive analysis, can be found in a recent study by Boyack et al.,~\cite{boyack_characterizing_2018}. In this analysis, I focus primarily on the \textit{Journal of informetrics,} a journal of relatively small size and of which I am familiar. There are 735 publications in the \textit{Journal of Informetrics}, which contain a total of around 20,000 sentences containing in-text citations. From these 20,000 sentences, I randomly sampled 8,000; this smaller sample is more amenable to the the techniques described in subsection~\ref{subsec:approach}. 
 
 
 \subsection{Selected Features}
 
-Previous analysis of citation function have relied on a host of sophisticated features such as parts-of-speech-tagged N-grams of the sentence (Teufel, 2006; Athar, 2011; Li, 2013; Valenzuela, 2015) and sentence dependency structure (athar, 2011; Li, 2013; Jha, 2017). However, these approaches tend to produce large feature sets that, while often useful for classification, are difficult to interpret. In this early stage of analysis, I will instead focus on a smaller set of features that can be more readily interpreted.  
+Previous analysis of citation function have relied on a host of sophisticated features such as parts-of-speech-tagged N-grams of the sentence~\cite{teufel_automatic_2006, athar_sentiment_2011, li_towards_2013, valenzuela_identifying_2015} and sentence dependency structure~\cite{athar_context-enhanced_2012, li_towards_2013, jha_nlp-driven_2017}. However, these approaches tend to produce large feature sets that, while often useful for classification, are difficult to interpret. In this early stage of analysis, I will instead focus on a smaller set of features that can be more readily interpreted.  
 
 I represent each sentence in a feature-space using a simplified version of a bag-of-words model. I counted the occurrence of words in each sentence that appeared in each of 31 mutually-exclusive word-lists. These word-lists were originally crafted to study citation sentiment (Small, 2018), and words within each list were selected due to their having relevance within scientific writing. 
 
-In addition to features extracted from the textual elements of each citation, past research has also demonstrated the usefulness of contextual features of the citation, such as its position in the paper (Teufel 2006; Valenzuela, 2015; Jha, 2017). Because of this, I included a feature containing the \textit{percentage} of progression of the citation through the paper, which is to say the index of the citation sentence in the paper divided by the total number of sentences. For example, if a sentence containing a citation is the 5th sentence in a paper with 200 total sentences, then it would have a sentence progression would be 0.025 percent. I also included a feature containing the number of citations in the citation sentence, and another variable representing the number of references in the paper. 
+In addition to features extracted from the textual elements of each citation, past research has also demonstrated the usefulness of contextual features of the citation, such as its position in the paper ~\cite{teufel_automatic_2006, valenzuela_identifying_2015, jha_nlp-driven_2017}. Because of this, I included a feature containing the \textit{percentage} of progression of the citation through the paper, which is to say the index of the citation sentence in the paper divided by the total number of sentences. For example, if a sentence containing a citation is the 5th sentence in a paper with 200 total sentences, then it would have a sentence progression would be 0.025 percent. I also included a feature containing the number of citations in the citation sentence, and another variable representing the number of references in the paper. 
 
 \subsection{Cluster generation and validation}
+\label{subsec:approach}
 Once I construct a feature vector for all citation sentences, I will use unsupervised clustering techniques in an attempt to uncover latent citation function. Past research on citation function have tended to focus on \textit{classification}, rather than clustering. As such, there is little history of which methods work best. I will use three methods representing a range of common clustering techniques: k-means, DBscan, and hierarchical agglomerative clustering. 
 
-To gain a sense of cluster quality, I embed the 35-dimensional feature space into a 2-dimensional feature space which can be plotted. I constructed a feature matrix by calculating the cosine distance (1 - cosine similarity) for each pair of points. I then used classical multidimensional-scaling to embed this distance matrix into 2-dimensional euclidean space. This approach of embedding a cosine distance matrix into euclidean space is not exactly mathematically "correct", but it produced good enough results. Classical multidimensional scaling has a computational complexity of $O(n^{3}$, and so scales poorly with larger data-sets; for this reason, I limit the final analysis to only n=8,000 sentences randomly selected from the original 20,000. 
+To gain a sense of cluster quality, I embed the 35-dimensional feature space into a 2-dimensional feature space which can be plotted. I constructed a feature matrix by calculating the cosine distance (1 - cosine similarity) for each pair of points. I then used classical multidimensional-scaling to embed this distance matrix into 2-dimensional euclidean space. This approach of embedding a cosine distance matrix into euclidean space is not exactly mathematically "correct", but it produced good enough results. Classical multidimensional scaling has a computational complexity of $O(n^{3)}$, and so scales poorly with larger data-sets; for this reason, I limit the final analysis to only n=8,000 sentences randomly selected from the original 20,000. 
 
 I ran several iterations of each of the above clustering techniques, and choose the seemingly optimal clustering by examining how the clusters map onto the 2-dimensional embedding. I then assessed the utility of the clustering by attempting to classify each sentence into its assigned cluster category. High accuracy in task is evidence that the proposed clustering is robust and can be predicted from the provided features. I use three classification techniques: k-nearest neighbors, a simple Rpart decision tree, and random forests. I run each through a series of parameter turnings and train each using 10-fold cross validation. 
 
@@ -138,11 +144,91 @@ I ran several iterations of each of the above clustering techniques, and choose 
 
 \section{Results and Discussion}
 
-These are some results and discussions
+I first created a feature matrix from the n=8000 randomly sample citation-containing sentences from the \textit{Journal of Informetrics}. I calculated pairwise cosine distances between each pair of sentence-feature vectors, and used multidimensional scaling (implemented in the \textsf{cmdscale} function in R) to embed this distance matrix in two dimensional space. The resulting embedding is shown in figure~\ref{fig:embedding_clustering}. 
+
+I then ran through several iterations of k-means, DBScan, and hierarchical agglomerative clustering onto the origional cosine-distance matrix. I overlaid cluster assignments onto the twp-dimensional embedding and selected several candidate clustering that appeared to be high quality; an example candidate clusterings resulting from each algorithm is shown in figure~\ref{fig:embedding_clustering}. K-means clustering tended to result in the most seemingly well-behaved candidate clusterings. Db-scan tended to produce unintuitive clusters for whichever parameter value I used. Hierarchical agglomerative clusteirng (using complete linkage) tended to result in clusters similar to those produced by k-means, though the results were much less well-behaved. For the remainder of analysis, I chose to focus on k-means clustering. 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{figures/plot1.png}
+	\caption{\textbf{Feature emebdding and candidate clusterings:} Top left: two-dimensional embedding created by applying multidimensional scaling to the feature space. Each point represents a sentence with its feature vector embedded into two-dimensional space. Following three graphs are candidate clustering using k-means (top right; k = 3), DBScan (bottom left) and hierarchical agglomeratice clustering (bottom right; cutting the tree at level three). Colors indicate cluster assignment.}
+	\label{fig:embedding_clustering}
+\end{figure}
+
+Figure~\ref{fig:kmeans_vis} shows candidate clusterings resulting from k-means clustering using cluster counts of k=2, k=3, k=4, and k=5. Two cluster centers produces a clear boundary across the data, whereas three clusuter centers results in the larger of the first two breaking in half. Using k=4 and k=5 cluster centers results in less well-behaved clusters, with new clusters appearing in between existing ones, bounded between them. Barring clearly defined clusters, deciding on an appropriate number of clusters is mostly a matter of intuition. Here I choose k=3, as this produces three well-define and well-bounded clusters. 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{figures/plot2.png}
+	\caption{\textbf{K-means clustering for different values of k:} Candidate clusterings produced by the k-means clustering algorithm for values of k between one and five. Each point represents a sentence with its feature vector embedded into two-dimensional space. Colors indicate cluster assignment.}
+	\label{fig:kmeans_vis}
+\end{figure}
+
+To assess the reliability of these clusters, I attempt to predict, for each citation sentence, to which cluster it would be assigned. I construct a 10-fold cross validation training regimen and train three classifiers: a simple Rpart decision tree, a k-nearest neighbor classifier, and a random forests classifier. I test these classifiers across a range of tuning parameters and show in table~\ref{table:classifier} the accuracy and kappa value of each using the optimal tuning. I found that all algorithms performed well, given the appropriate tuning (tuning graphs shown in figure~\ref{fig:tuning_params}). The random forests model had the highest accuracy, hovering at almost 97 percent. The simple decision tree produced has the second highest accuracy, at almost 95 percent. the k-nearest neighbors classifier performed the worst, with an accuracy of about 91 percent. The classifier performance from table~\ref{table:classifier} shows that the k=3 clustering  is robust, and can be predicted with high accuracy using the extracted feature vector. 
+
+\begin{table}[h]
+\centering
+\label{table:classifier}
+\caption{\textbf{Performance of classification models:} Accuracy and kappa measures for the Rpart decision tree, k-nearest neighbors, and random forest classification algorithms applied to the n=8,000 clustered citation sentence feature vectors. Measure result form k-fold cross-validation and shown for optimal tuning. The complexity parameter for the rpart tree is 0.000980. the optimal number of neighbors for k-nearest neighbors is ... The optimal number of randomly selected parameters for the random forests classifier is ten. }
+\begin{tabular}{l|r|r}
+Model          & Accuracy & Kappa \\
+Rpart          & 0.946    & 0.919 \\
+KNN            & 0.907    & 0.860 \\
+Random Forests & 0.968    & 0.952
+\end{tabular}
+\end{table}
+
+In figure~\ref{fig:features_clusters} I show the feature differences between each cluster. Several immediate differences stand out. Overall, the first cluster contains a higher proportion of almost all cue words, including "attitude" (e.g.: \textit{admittedly
+amazingly, prefer}), "causality" (e.g.: \textit{affected, because, impact, influence}), and "criticism" (e.g.: \textit{clashes, conflict, critique}), terms. The first cluster also contains a higher amount of "logical connectives" (e.g.: "and", "however", "whereas") and tend to have more citations in the sentence; these two feature seem to suggest that the first cluster tends to contain more citations and more complex sentences, using many logical connectives to "link" the citations together. The main difference between cluster two and the other clusters is that cluster two has a much higher average "sentence progression", meaning that these citations tend to appear much later in the paper. The third cluster seems to include citation-containing sentences that appear early in the paper, but are as complex and include fewer citations than those sentences assigned to cluster one. 
+
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{figures/plot3.png}
+	\caption{\textbf{Feature comparisons of k=3 clusters:} Contains feature-level differences for each of the 32 word-list based features.}
+	\label{fig:features_clusters}
+\end{figure}
+
+To further assess the discriminatory power of these features, I show in figure~\ref{fig:decision_tree} a simplified version of the decision tree created to populate table~\ref{table:classifier}. The most important features tend to be \textit{conextual} features, rather than qualities of the text itself, with the sentence progression serving as the root node. Logical connectives (e.g.: \textit{and, but, however, whereas}, etc.) also have utility for discriminating between clusters. The only other cue-term that shows up in this decision tree are methodological terms (e.g.: \textit{analyse, approach, compute, estimate}), which are associated with cluster 1. 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{figures/plot5.png}
+	\caption{\textbf{Decision Tree:} Rpart-constructed decision tree to assign a sentence-feature vector to a cluster id. Created using a complexity parameter of 0.00951. }
+	\label{fig:decision_tree}
+\end{figure}
+
+\newpage
+
+Examples of sentences from each of the clusters are given, in order from the first to the third cluster, below
+
+\begin{enumerate}
+\item \textit{“Other techniques – especially those based on citing-side normalization – are more “adaptive”, since the sample is determined considering the "neighborhood" of the publication(s) of interest – typically consisting of the set of publications citing or being cited by them (Glänzel \& Schubert, 2003; Leydesdorff \& Shin, 2011).”}
+
+\item \textit{“An algorithm that would weigh the cosine values as a basis for the computation of betweenness centrality would perhaps improve our capacity to indicate interdisciplinarity (Brandes, 2001)”}
+
+\item \textit{“According to Tijssen, Visser, and van Leeuwen (2002) and Tijssen and van Leeuwen (2006), highly cited papers are those among the top 10\% of the most highly cited papers—that is, papers in or greater than the 90th percentile (see also Lewison, Thornicroft, Szmukler, \& Tansella, 2007)”}
+
+\end{enumerate}
 
 \section{Conclusion}
 
-This is a conclusion
+In this project I took a first step towards creating a data-driven understanding of citation function. I extracted a simplified set of features from 8,000 citation-containing sentences from the \textit{Journal of Informetrics} and identified three robust clusters. These clusters seem to represent (1) citations that appear early in the paper, that tend to appear along in their sentence, and tend to include methodological cue words; (2) citations that appear later in the paper, and tend to appear along; or (3) tend to appear early in the paper, but tend to appear alongside multiple other citations. Contextual factors, such as the position of the sentences, seem to offer the most discriminatory power. Some in-text features are also different between clusters, and some are common enough that they also offer some discriminatory power. 
+
+This project is merely a first step in a project to better inform my discipline's understanding of citation function and how it can be characterized. There are many avenues for improvement for future work. One path forward it to work with better and more efficient embedding algorithms, such as t-SNE, which is a sort of middle ground between multidimensional scaling (which considers all distances equally), Isomap (which considers only local distances). I will also improve this work by incorporating new features, such as new word-lists, the age of the cited work, and whether or not the citation is a \textit{self citation} (meaning that at least one of the authors of the citing paper is also an author of the cited paper). Once the methodology has been improved and tested, we will also expand this analysis to a larger portion of the Elsevier ScienceDirect dataset, spanning across multiple disciplines. 
+
+\newpage
+\section{Supplamental Materials}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{figures/plotsi1.png}
+	\caption{\textbf{Tuning graphs:} Tuning graphs for the complexity parameter of the rpart decision tree (left), the number of neighbors in k-nearest neighbors (middle) and the number of randomly selected predictors of the random forests (right). }
+	\label{fig:tuning_params}
+\end{figure}
+\end{document}
+
+
 
 %----------------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
@@ -157,4 +243,4 @@ This is a conclusion
 
 %----------------------------------------------------------------------------------------
 
-\end{document}
+
