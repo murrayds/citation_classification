@@ -1,0 +1,114 @@
+---
+title: "R Notebook"
+author: "Dakota Murray"
+output: html_notebook
+---
+
+
+
+
+```{r}
+library(citeclass)
+library(tidyverse)
+library(data.table)
+library(tidytext)
+library(tm)
+library(topicmodels)
+library(SnowballC)
+library(proxy)
+
+
+replace_citance_with_tag <- function(text, citance_labels, replacement = "<CITATION>") {
+  new_text = text
+  for (citance_label in citance_labels) {
+    new_text = gsub(paste("\\(*\\Q", citance_label, "\\E[,;]*\\)*", sep="", collapse="|"), replacement=replacement, new_text)  
+  }
+  new_text = gsub("(<CITATION> )+<CITATION>", replacement=replacement, new_text)
+  return(new_text)
+}
+
+
+data_raw <- load_joi_data()
+
+label_df <- data_raw %>%
+  group_by(doi, sentence_seq) %>%
+  mutate(
+    labels = paste0(label, collapse = "||")
+  ) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(doi, sentence_seq, labels)
+
+data_ready <- data_raw %>%
+  inner_join(label_df, by = c("doi", "sentence_seq")) %>%
+  group_by(doi, sentence_seq) %>%
+  slice(1) %>%
+  mutate(
+    text = replace_citance_with_tag(text, unlist(strsplit(labels, split = "||", fixed = T)))
+  )
+```
+
+```{r}
+my_stopwords <- c("e.g", "jk")
+tidydata <- data_ready %>%
+  top_n(3000) %>%
+  group_by(doi, sentence_seq) %>%
+  mutate(doc_id = paste0(doi, ":", sentence_seq),
+         text = gsub("CITATION", replacement = "", text, ignore.case = FALSE)
+  ) %>%
+  ungroup() %>%
+  group_by(doi, reference_seq) %>%
+  mutate(text = paste(text)) %>%
+  slice(1) %>%
+  ungroup() %>%
+  unnest_tokens(word, text, drop = F, to_lower = T, token = "ngrams", n = 1) %>%
+  filter(!word %in% stop_words$word) %>%
+  filter(is.na(as.numeric(word))) %>%
+  filter(!word %in% my_stopwords) %>%
+  count(doc_id, word, sort = TRUE) %>%
+  bind_tf_idf(word, doc_id, n)
+```
+
+```{r}
+tdm <- tidydata %>% 
+  group_by(word) %>%
+  filter(n() > 10) %>%
+  cast_dtm(doc_id, word, n)
+
+lda <- LDA(tdm, k = 12, control = list(seed = 1234, alpha = 0.1))
+
+summary(lda)
+
+topic_probs <- tidy(lda, matrix = "gamma") %>%
+  spread(topic, gamma) %>%
+  top_n(5000)
+
+
+dist.matrix <- proxy::dist(topic_probs[, -1]) 
+
+points.mds <- cmdscale(dist.matrix, 2)
+
+
+plot(points.mds)
+
+
+tidy(lda, matrix = "beta") %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip()
+```
+
+
+```{r}
+library(Rtsne)
+tmp <- topic_probs[!duplicated(topic_probs[, -1]), ]
+points.tsne <- Rtsne(tmp, dims = 2, perplexity=30, max_iter = 500)
+plot(points.tsne$Y)
+```
+
