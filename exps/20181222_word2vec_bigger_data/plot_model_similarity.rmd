@@ -1,0 +1,39 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+similarity <- read_delim("Documents/citation_classification/exps/20181222_word2vec_bigger_data/model_similarity_data.txt", 
+                                    "\t", escape_double = FALSE, col_types = cols(X1 = col_skip()), 
+                                    trim_ws = TRUE)
+table(similarity$word)
+```
+
+Calculate the $r^{2}$ of each group
+```{r}
+words_ordered <- similarity %>%
+  group_by(word) %>%
+  summarize(
+    r = cor(x, y) ^ 2
+  ) %>%
+  arrange(r) %>%
+  mutate(word.ord = factor(word, levels = word[order(desc(r))]))
+
+words_ordered
+```
+
+```{r}
+similarity %>%
+  left_join(words_ordered, by = c("word" = "word")) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point(alpha = 0.01) +
+  facet_wrap(~word.ord) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  geom_text(data = words_ordered, aes(group = word.ord, label = paste0("r2 = ", round(r, 2))), x = -0.35, y = 0.90, size = 3) +
+  geom_smooth(method = "loess") +
+  theme_bw() +
+  labs(x = "cosine similarity-abstracts",
+       y = "cosine similarity—citances")
+```
