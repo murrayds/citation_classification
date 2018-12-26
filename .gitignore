@@ -45,3 +45,23 @@ rsconnect/
 
 # experiment html files
 exps/*/*.html
+
+# models produced by gensim package
+exps/*/*.model
+exps/*/*.png
+exps/*/*.ndy
+exps/*/*.csv
+exps/*/*.txt
+
+# extra latex files
+paper/*/*.aux
+paper/*/*.bbl
+paper/*/*.blg
+paper/*/*.lof
+paper/*/*.log
+paper/*/*.lot
+paper/*/*.out
+paper/*/*.pdf
+paper/*/*.gz
+paper/*/*.toc
+
