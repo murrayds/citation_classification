@@ -5,7 +5,7 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
-similarity <- read_delim("Documents/citation_classification/exps/20181222_word2vec_bigger_data/model_similarity_data.txt", 
+similarity <- read_delim("~/Documents/citation_classification/exps/20181222_word2vec_bigger_data/model_similarity_data.txt", 
                                     "\t", escape_double = FALSE, col_types = cols(X1 = col_skip()), 
                                     trim_ws = TRUE)
 table(similarity$word)
@@ -25,7 +25,7 @@ words_ordered
 ```
 
 ```{r}
-similarity %>%
+p1 <- similarity %>%
   left_join(words_ordered, by = c("word" = "word")) %>%
   ggplot(aes(x = x, y = y)) +
   geom_point(alpha = 0.01) +
@@ -35,5 +35,57 @@ similarity %>%
   geom_smooth(method = "loess") +
   theme_bw() +
   labs(x = "cosine similarity-abstracts",
-       y = "cosine similarity—citances")
+       y = "cosine similarity—citances", 
+       title = "Comparison")
+
+p1
+```
+
+
+
+Now repeat the above process, except this time for he baseline graph
+```{r}
+library(tidyverse)
+baseline <- read_delim("~/Documents/citation_classification/exps/20181222_word2vec_bigger_data/model_baseline_similarity_data.txt", 
+                                    "\t", escape_double = FALSE, col_types = cols(X1 = col_skip()), 
+                                    trim_ws = TRUE)
+table(baseline$word)
+```
+
+Calculate the $r^{2}$ of each group
+```{r}
+words_ordered_baseline <- baseline %>%
+  group_by(word) %>%
+  summarize(
+    r = cor(x, y) ^ 2
+  ) 
+
+words_ordered_baseline
+```
+
+```{r}
+p2 <- baseline %>%
+  left_join(words_ordered, by = c("word" = "word")) %>%
+  select(-r) %>%
+  left_join(words_ordered_baseline, by = c("word" = "word")) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point(alpha = 0.01) +
+  facet_wrap(~word.ord) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  geom_text(data = words_ordered, aes(group = word.ord, label = paste0("r2 = ", round(r, 3))), x = -0.35, y = 0.90, size = 3) +
+  geom_smooth(method = "loess") +
+  theme_bw() +
+  labs(x = "cosine similarity-iteration 1",
+       y = "cosine similarity—iteration 2",
+       title = "Baseline")
+
+p2
+```
+
+
+```{r}
+library(grid)
+library(gridExtra)
+g <- grid.arrange(p1, p2, ncol = 2)
+g
 ```
