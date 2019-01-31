@@ -1,0 +1,108 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(readr)
+library(tidytext)
+library(stringr)
+library(tm)
+library(tidyverse)
+library(SnowballC)
+```
+Load the three data samples
+```{r}
+intro <- read_delim("~/Documents/CWTS_Server/introduction_million_sample.rpt", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+
+methods <- read_delim("~/Documents/CWTS_Server/methods_million_sample.rpt", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+
+discussion <- read_delim("~/Documents/CWTS_Server/discussion_million_sample.rpt", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+```
+
+
+Process the data samples into probability disitrbutions
+
+```{r}
+# Process three groups
+tidy_intro_all <- intro %>%
+  unnest_tokens(word, text, drop = F, to_lower = T, token = "ngrams", n = 1) 
+
+tidy_intro <- tidy_intro_all %>%
+  mutate(word = wordStem(word)) %>%
+  count(word, sort = TRUE) %>%
+  mutate(proportion = n / sum(n))
+  
+  
+tidy_methods_all <- methods %>%
+  unnest_tokens(word, text, drop = F, to_lower = T, token = "ngrams", n = 1)
+  
+tidy_methods <- tidy_methods_all %>%
+  mutate(word = wordStem(word)) %>%
+  count(word, sort = TRUE) %>%
+  mutate(proportion = n / sum(n))
+
+tidy_discussion_all <- discussion %>%
+  unnest_tokens(word, text, drop = F, to_lower = T, token = "ngrams", n = 1)
+
+tidy_discussion <- tidy_discussion_all %>%
+  mutate(word = wordStem(word)) %>%
+  count(word, sort = TRUE) %>%
+  mutate(proportion = n / sum(n))
+
+# Add section arguments
+tidy_intro$section = "intro"
+tidy_methods$section = "methods"
+tidy_discussion$section = "discussion"
+
+# Create single dataframe
+tidy_all <- rbind(tidy_intro, tidy_methods, tidy_discussion)
+  
+
+tidy_all %>% filter(word == wordStem("propose"))
+```
+
+Get the average length of sentences in each of the datasets...
+```{r}
+tidy_intro_all %>%
+  group_by(doi, sentence_seq) %>%
+  summarize(n_tokens = n())
+```
+
+
+```{r}
+library(viridis)
+
+terms = c("report", "predict", "propose", "might",
+         "assume", "may", "seem", "suggest", "cannot", "will", "should", 
+         "could", "must", "indicate", "would", "appear")
+
+
+p <- tidy_all %>%
+  filter(word %in% wordStem(terms)) %>%
+  group_by(section) %>%
+  mutate(word = factor(word, labels = terms)) %>%
+  mutate(word = reorder(word, desc(n))) %>%
+  arrange(word) %>%
+  ungroup() %>%
+  mutate(section = factor(section, levels = c("intro", "methods", "discussion"))) %>%
+  ggplot(aes(x = section, y = proportion, fill = section)) +
+  geom_bar(stat = "identity", color = "black", alpha = 0.8) +
+  facet_wrap(~word, ncol = 8) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        axis.title.x = element_blank()) +
+  labs(y = "Count") +
+  scale_fill_viridis(discrete = T, option = "C") +
+  guides(fill = F)
+
+p
+
+ggsave("~/Desktop/hedging_incidence.png", p, width = 8, height = 5)
+```
+
+

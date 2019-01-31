@@ -1,0 +1,188 @@
+---
+title: "Comparing word2vec models by section"
+output: html_notebook
+---
+
+```{r}
+library(readr)
+library(tidyverse)
+sim_intro_methods <- read_delim("~/Documents/citation_classification/exps/intro_methods_similarity.txt", 
+    "\t", escape_double = FALSE, col_types = cols(X1 = col_skip()), 
+    trim_ws = TRUE)
+```
+
+```{r}
+intro_methods_ordered <- sim_intro_methods %>%
+  group_by(word) %>%
+  summarize(
+    r = cor(x, y) ^ 2
+  ) %>%
+  arrange(r) %>%
+  mutate(word.ord = factor(word, levels = word[order(desc(r))]))
+
+intro_methods_ordered
+```
+
+```{r}
+sim_intro_methods %>%
+  mutate(
+    word = factor(word, levels = levels(intro_methods_ordered$word.ord))
+  ) %>%
+  arrange(word) %>%
+  ggplot(aes(x = x, y = y, group = word)) +
+  geom_point(alpha = 0.001) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  facet_wrap(~word) +
+  geom_smooth() +
+  geom_text(data = intro_methods_ordered, x = 0.1, y = 0.8, aes(group = word.ord, label = round(r, 3))) +
+  theme_bw() +
+  labs(x = "Intro Model",
+       y = "Methods Model")
+```
+
+```{r}
+sim_intro_discussion <- read_delim("~/Documents/citation_classification/exps/intro_discussion_similarity.txt", 
+    "\t", escape_double = FALSE, col_types = cols(X1 = col_skip()), 
+    trim_ws = TRUE)
+
+intro_discussion_ordered <- sim_intro_discussion %>%
+  group_by(word) %>%
+  summarize(
+    r = cor(x, y) ^ 2
+  ) %>%
+  arrange(r) %>%
+  mutate(word.ord = factor(word, levels = word[order(desc(r))]))
+```
+
+
+
+```{r}
+sim_intro_discussion %>%
+  mutate(
+    word = factor(word, levels = levels(intro_discussion_ordered$word.ord))
+  ) %>%
+  arrange(word) %>%
+  ggplot(aes(x = x, y = y, group = word)) +
+  geom_point(alpha = 0.001) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  facet_wrap(~word) +
+  geom_smooth() +
+  geom_text(data = intro_discussion_ordered, x = 0.1, y = 0.8, aes(group = word.ord, label = round(r, 3))) +
+  theme_bw() +
+  labs(x = "Intro Model",
+       y = "Discussion Model")
+```
+
+
+```{r}
+sim_methods_discussion <- read_delim("~/Documents/citation_classification/exps/methods_discussion_similarity.txt", 
+    "\t", escape_double = FALSE, col_types = cols(X1 = col_skip()), 
+    trim_ws = TRUE)
+
+methods_discussion_ordered <- sim_methods_discussion %>%
+  group_by(word) %>%
+  summarize(
+    r = cor(x, y) ^ 2
+  ) %>%
+  arrange(r) %>%
+  mutate(word.ord = factor(word, levels = word[order(desc(r))]))
+```
+
+
+```{r}
+sim_methods_discussion %>%
+  mutate(
+    word = factor(word, levels = levels(methods_discussion_ordered$word.ord))
+  ) %>%
+  arrange(word) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point(alpha = 0.01) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  facet_wrap(~word) +
+  geom_smooth() +
+  geom_text(data = methods_discussion_ordered, x = 0.1, y = 0.8, aes(group = word.ord, label = round(r, 3))) +
+  theme_bw() +
+  labs(x = "Methods Model",
+       y = "Discussion Model")
+```
+
+```{r}
+intro_methods_ordered$type = "intro-methods"
+intro_discussion_ordered$type = "intro-discussion"
+methods_discussion_ordered$type = "methods-discussion"
+
+combined_words <- rbind(intro_methods_ordered, intro_discussion_ordered, methods_discussion_ordered) %>%
+  mutate(type = factor(type, levels = c("intro-methods", "intro-discussion", "methods-discussion")))
+
+
+word_levels = c("should", "may", "indicate", "might", "assume", "seem", "appear", "must", 
+                "will", "cannot", "report", "would", "could", "predict", "propose", "suggest")
+
+p <- combined_words %>%
+  mutate(word = factor(word, levels = word_levels)) %>%
+  ggplot(aes(x = type, y = r, color = type, shape = type)) +
+  geom_point(size = 2.5) +
+  facet_wrap(~word, ncol = 8) +
+  theme_bw() +
+  scale_shape_discrete(name = "Section comparison") +
+  scale_color_viridis(discrete = T, option = "B", name = "Section comparison") +
+  #guides(color = T, shape = T) +
+  theme(
+    #axis.text.x = element_text(size = 8, angle = 45, hjust = 1, vjust = 1),
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "bottom"
+  ) +
+  labs(
+    y = "R-squared of word similarities between two models"
+  )
+
+p
+
+ggsave("~/Desktop/section_semantic_comparison.png", p, width = 5, height = 3)
+```
+
+```{r}
+combined_words %>%
+  ggplot(aes(x = word, y = r, color = type, shape = type)) +
+  geom_point() +
+  #facet_wrap(~type, nrow = 3) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+```
+
+
+Baseline measure:
+```{r}
+baseline <- read_delim("~/Documents/citation_classification/exps/20181222_word2vec_bigger_data/model_baseline_similarity_data.txt", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+
+
+baseline_ordered <- baseline %>%
+  group_by(word) %>%
+  summarize(
+    r = cor(x, y) ^ 2
+  ) %>%
+  arrange(r) %>%
+  mutate(word.ord = factor(word, levels = word[order(desc(r))]))
+
+mean(baseline_ordered$r)
+
+baseline %>%
+  mutate(
+    word = factor(word, levels = levels(baseline_ordered$word.ord))
+  ) %>%
+  arrange(word) %>%
+  ggplot(aes(x = x, y = y, group = word)) +
+  geom_point(alpha = 0.001) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  facet_wrap(~word) +
+  #geom_smooth() +
+  geom_text(data = baseline_ordered, x = 0.1, y = 0.8, aes(group = word.ord, label = round(r, 3))) +
+  theme_bw() +
+  labs(x = "Training Iteration 1",
+       y = "Training Iteration 2")
+
+```

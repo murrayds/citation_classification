@@ -46,6 +46,9 @@ data_ready <- data_raw %>%
   mutate(
     text = replace_citance_with_tag(text, unlist(strsplit(labels, split = "||", fixed = T)))
   )
+
+# And now lets save the data...
+write.csv(data_ready, file = "~/Dropbox/citation_type/data/prepared_sentences.csv")
 ```
 
 ```{r}
